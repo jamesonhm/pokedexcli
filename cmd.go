@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 type cliCommand struct {
 	name     string
@@ -18,7 +21,7 @@ func cmds() map[string]cliCommand {
 		"exit": {
 			name:     "exit",
 			desc:     "Exit the pokedex",
-			callback: nil,
+			callback: cmdExit,
 		},
 	}
 }
@@ -39,5 +42,10 @@ func cmdHelp() error {
 		fmt.Printf("%s: %s\n", cmd.name, cmd.desc)
 	}
 	fmt.Println()
+	return nil
+}
+
+func cmdExit() error {
+	os.Exit(0)
 	return nil
 }

@@ -14,9 +14,10 @@ func main() {
 		callback, err := cmd(scanner.Text())
 		if err != nil {
 			fmt.Println(err)
-		}
-		if err := callback(); err != nil {
-			fmt.Println(err)
+		} else {
+			if err := callback(); err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 }
