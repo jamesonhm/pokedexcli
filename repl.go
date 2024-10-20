@@ -9,6 +9,8 @@ import (
 
 func runRepl() {
 	scanner := bufio.NewScanner(os.Stdin)
+
+	config := NewConfig()
 	for {
 		fmt.Printf("Pokedex> ")
 		scanner.Scan()
@@ -19,16 +21,17 @@ func runRepl() {
 		}
 
 		cmdName := words[0]
-		callback, err := cmd(cmdName)
+		cliCmd, ok := getCmds()[cmdName]
+		if !ok {
+			fmt.Println("Not a valid cmd")
+			continue
+		}
 
-		if err != nil {
+		if err := cliCmd.callback(config); err != nil {
 			fmt.Println(err)
 			continue
 		}
 
-		if err := callback(); err != nil {
-			fmt.Println(err)
-		}
 	}
 }
 
