@@ -1,14 +1,30 @@
-package main
+package pokeapi
 
 const BaseApi string = "https://pokeapi.co/api/v2/"
 
-type config struct {
+type Config struct {
 	next     string
 	previous string
 }
 
-func NewConfig() *config {
-	return &config{}
+func NewConfig() *Config {
+	return &Config{}
+}
+
+func (c *Config) Previous() string {
+	return c.previous
+}
+
+func (c *Config) UpdatePrev(new string) {
+	c.previous = new
+}
+
+func (c *Config) Next() string {
+	return c.next
+}
+
+func (c *Config) UpdateNext(new string) {
+	c.next = new
 }
 
 type LocationArea struct {

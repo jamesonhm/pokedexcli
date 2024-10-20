@@ -6,12 +6,16 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
 )
+
+type callbackFn func(c *pokeapi.Config) error
 
 type cliCommand struct {
 	name     string
 	desc     string
-	callback func(c *config) error
+	callback callbackFn
 }
 
 func getCmds() map[string]cliCommand {
@@ -31,19 +35,15 @@ func getCmds() map[string]cliCommand {
 			desc:     "display the names of 20 location areas in the pokemon world",
 			callback: cmdMap,
 		},
+		"mapb": {
+			name:     "mapb",
+			desc:     "display the names of previous 20 location areas in the pokemon world",
+			callback: cmdMapb,
+		},
 	}
 }
 
-//func cmd(input string) (func(c *config) error, error) {
-//	cliCmd, ok := getCmds()[input]
-//	if !ok {
-//		return nil, fmt.Errorf("Not a valid cmd")
-//	}
-//
-//	return cliCmd.callback, nil
-//}
-
-func cmdHelp(c *config) error {
+func cmdHelp(c *pokeapi.Config) error {
 	fmt.Printf("\nWelcome to the Pokedex!\n\n")
 	fmt.Printf("Usage:\n\n")
 	for _, cmd := range getCmds() {
@@ -53,17 +53,17 @@ func cmdHelp(c *config) error {
 	return nil
 }
 
-func cmdExit(c *config) error {
+func cmdExit(c *pokeapi.Config) error {
 	os.Exit(0)
 	return nil
 }
 
-func cmdMap(c *config) error {
+func cmdMap(c *pokeapi.Config) error {
 	var url string
-	if c.next == "" {
-		url = BaseApi + "location-area/"
+	if c.Next() == "" {
+		url = pokeapi.BaseApi + "location-area/"
 	} else {
-		url = c.next
+		url = c.Next()
 	}
 	res, err := http.Get(url)
 	if err != nil {
@@ -74,15 +74,46 @@ func cmdMap(c *config) error {
 	if err != nil {
 		return err
 	}
-	locAreas := NewLocationArea()
+	locAreas := pokeapi.NewLocationArea()
 
 	err = json.Unmarshal(body, &locAreas)
 	if err != nil {
 		return err
 	}
 
-	c.previous = locAreas.Previous
-	c.next = locAreas.Next
+	c.UpdatePrev(locAreas.Previous)
+	c.UpdateNext(locAreas.Next)
+	for _, result := range locAreas.Results {
+		fmt.Printf("%v\n", result.Name)
+	}
+	return nil
+}
+
+func cmdMapb(c *pokeapi.Config) error {
+	var url string
+	if c.Previous() == "" {
+		return fmt.Errorf("On first Page, no previous pages")
+	}
+	url = c.Previous()
+
+	res, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	body, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		return err
+	}
+	locAreas := pokeapi.NewLocationArea()
+
+	err = json.Unmarshal(body, &locAreas)
+	if err != nil {
+		return err
+	}
+
+	c.UpdatePrev(locAreas.Previous)
+	c.UpdateNext(locAreas.Next)
 	for _, result := range locAreas.Results {
 		fmt.Printf("%v\n", result.Name)
 	}
