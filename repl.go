@@ -3,15 +3,43 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
 	"os"
 	"strings"
+
+	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
 )
 
-func runRepl() {
+type Config struct {
+	next     string
+	previous string
+	client   *pokeapi.Client
+}
+
+func NewConfig(client *pokeapi.Client) *Config {
+	return &Config{
+		client: client,
+	}
+}
+
+func (c *Config) Previous() string {
+	return c.previous
+}
+
+func (c *Config) UpdatePrev(new string) {
+	c.previous = new
+}
+
+func (c *Config) Next() string {
+	return c.next
+}
+
+func (c *Config) UpdateNext(new string) {
+	c.next = new
+}
+
+func runRepl(config *Config) {
 	scanner := bufio.NewScanner(os.Stdin)
 
-	config := pokeapi.NewConfig()
 	for {
 		fmt.Printf("Pokedex> ")
 		scanner.Scan()

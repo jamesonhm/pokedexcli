@@ -1,16 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-
-	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
 )
 
-type callbackFn func(c *pokeapi.Config) error
+type callbackFn func(c *Config) error
 
 type cliCommand struct {
 	name     string
@@ -43,7 +38,7 @@ func getCmds() map[string]cliCommand {
 	}
 }
 
-func cmdHelp(c *pokeapi.Config) error {
+func cmdHelp(c *Config) error {
 	fmt.Printf("\nWelcome to the Pokedex!\n\n")
 	fmt.Printf("Usage:\n\n")
 	for _, cmd := range getCmds() {
@@ -53,30 +48,13 @@ func cmdHelp(c *pokeapi.Config) error {
 	return nil
 }
 
-func cmdExit(c *pokeapi.Config) error {
+func cmdExit(c *Config) error {
 	os.Exit(0)
 	return nil
 }
 
-func cmdMap(c *pokeapi.Config) error {
-	var url string
-	if c.Next() == "" {
-		url = pokeapi.BaseApi + "location-area/"
-	} else {
-		url = c.Next()
-	}
-	res, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		return err
-	}
-	locAreas := pokeapi.NewLocationArea()
-
-	err = json.Unmarshal(body, &locAreas)
+func cmdMap(c *Config) error {
+	locAreas, err := c.client.ListLocations(c.Next())
 	if err != nil {
 		return err
 	}
@@ -89,25 +67,8 @@ func cmdMap(c *pokeapi.Config) error {
 	return nil
 }
 
-func cmdMapb(c *pokeapi.Config) error {
-	var url string
-	if c.Previous() == "" {
-		return fmt.Errorf("On first Page, no previous pages")
-	}
-	url = c.Previous()
-
-	res, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		return err
-	}
-	locAreas := pokeapi.NewLocationArea()
-
-	err = json.Unmarshal(body, &locAreas)
+func cmdMapb(c *Config) error {
+	locAreas, err := c.client.ListLocations(c.Previous())
 	if err != nil {
 		return err
 	}

@@ -1,30 +1,57 @@
 package pokeapi
 
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"time"
+)
+
 const BaseApi string = "https://pokeapi.co/api/v2/"
 
-type Config struct {
-	next     string
-	previous string
+type Client struct {
+	baseUrl    string
+	httpClient http.Client
 }
 
-func NewConfig() *Config {
-	return &Config{}
+func NewClient(timeout time.Duration) *Client {
+	return &Client{
+		baseUrl: BaseApi,
+		httpClient: http.Client{
+			Timeout: timeout,
+		},
+	}
 }
 
-func (c *Config) Previous() string {
-	return c.previous
-}
+func (c *Client) ListLocations(pageURL string) (LocationArea, error) {
+	url := c.baseUrl + "location-area"
+	if pageURL != "" {
+		url = pageURL
+	}
 
-func (c *Config) UpdatePrev(new string) {
-	c.previous = new
-}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return LocationArea{}, err
+	}
 
-func (c *Config) Next() string {
-	return c.next
-}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return LocationArea{}, err
+	}
+	defer resp.Body.Close()
 
-func (c *Config) UpdateNext(new string) {
-	c.next = new
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return LocationArea{}, err
+	}
+
+	locAreas := LocationArea{}
+	err = json.Unmarshal(body, &locAreas)
+	if err != nil {
+		return LocationArea{}, err
+	}
+
+	return locAreas, nil
 }
 
 type LocationArea struct {
@@ -35,8 +62,4 @@ type LocationArea struct {
 		Name string `json:"name"`
 		Url  string `json:"url"`
 	} `json:"results"`
-}
-
-func NewLocationArea() LocationArea {
-	return LocationArea{}
 }
