@@ -68,6 +68,10 @@ func cmdMap(c *Config) error {
 }
 
 func cmdMapb(c *Config) error {
+	if c.Previous() == "" {
+		return fmt.Errorf("On the first page")
+	}
+
 	locAreas, err := c.client.ListLocations(c.Previous())
 	if err != nil {
 		return err
