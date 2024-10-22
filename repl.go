@@ -7,17 +7,20 @@ import (
 	"strings"
 
 	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
+	"github.com/jamesonhm/pokedexcli/internal/pokecache"
 )
 
 type Config struct {
 	next     string
 	previous string
 	client   *pokeapi.Client
+	cache    *pokecache.Cache
 }
 
-func NewConfig(client *pokeapi.Client) *Config {
+func NewConfig(client *pokeapi.Client, cache *pokecache.Cache) *Config {
 	return &Config{
 		client: client,
+		cache:  cache,
 	}
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	//"github.com/jamesonhm/pokedexcli/internal/pokecache"
 )
 
 type callbackFn func(c *Config) error
@@ -54,6 +55,8 @@ func cmdExit(c *Config) error {
 }
 
 func cmdMap(c *Config) error {
+	//data, ok := c.cache.Get(c.Next())
+
 	locAreas, err := c.client.ListLocations(c.Next())
 	if err != nil {
 		return err

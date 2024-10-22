@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
+	"github.com/jamesonhm/pokedexcli/internal/pokecache"
 )
 
 // import (
@@ -14,6 +15,7 @@ import (
 
 func main() {
 	client := pokeapi.NewClient(5 * time.Second)
-	config := NewConfig(client)
+	cache := pokecache.NewCache(time.Second * 5)
+	config := NewConfig(client, cache)
 	runRepl(config)
 }

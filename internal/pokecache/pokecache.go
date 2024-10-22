@@ -1,6 +1,7 @@
 package pokecache
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -10,18 +11,26 @@ type cacheEntry struct {
 	val       []byte
 }
 
-type cache struct {
-	mu      sync.RWMutex
-	entries map[string]cacheEntry
+type Cache struct {
+	mu       sync.RWMutex
+	entries  map[string]cacheEntry
+	stopChan chan struct{}
 }
 
-func NewCache(interval time.Duration) *cache {
-	cache := cache{}
-	cache.reapLoop(interval)
+func NewCache(interval time.Duration) *Cache {
+	cache := Cache{
+		entries:  make(map[string]cacheEntry),
+		stopChan: make(chan struct{}),
+	}
+	go cache.reapLoop(interval)
 	return &cache
 }
 
-func (c *cache) Add(key string, val []byte) {
+func (c *Cache) Stop() {
+	close(c.stopChan)
+}
+
+func (c *Cache) Add(key string, val []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	entry := cacheEntry{
@@ -31,9 +40,9 @@ func (c *cache) Add(key string, val []byte) {
 	c.entries[key] = entry
 }
 
-func (c *cache) Get(key string) ([]byte, bool) {
+func (c *Cache) Get(key string) ([]byte, bool) {
 	c.mu.RLock()
-	defer c.mu.Unlock()
+	defer c.mu.RUnlock()
 	data, ok := c.entries[key]
 	if !ok {
 		return nil, false
@@ -41,22 +50,29 @@ func (c *cache) Get(key string) ([]byte, bool) {
 	return data.val, true
 }
 
-func (c *cache) reapLoop(interval time.Duration) {
+func (c *Cache) reapLoop(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	go func() {
-		for {
-			select {
-			case t := <-ticker.C:
-				c.mu.Lock()
-				for entry := range c.entries {
-					if t.Sub(c.entries[entry].createdAt) > interval {
-						delete(c.entries, entry)
-					}
-				}
-				c.mu.Unlock()
-			default:
-			}
+	for {
+		select {
+		case <-ticker.C:
+			c.pruneEntries(interval)
 		}
-	}()
+	}
+}
+
+func (c *Cache) pruneEntries(interval time.Duration) {
+	now := time.Now()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for k, v := range c.entries {
+		fmt.Printf("%s : %v\n", k, v)
+		fmt.Printf("t.C: %s - created: %s\n", now, v.createdAt)
+		fmt.Printf("t.C - created: %v\n", now.Sub(v.createdAt))
+		if now.Sub(v.createdAt) > interval {
+			delete(c.entries, k)
+		}
+	}
 }
