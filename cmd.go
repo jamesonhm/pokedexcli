@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	//"github.com/jamesonhm/pokedexcli/internal/pokecache"
 )
 
 type callbackFn func(c *Config) error

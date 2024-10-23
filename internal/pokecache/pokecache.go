@@ -1,7 +1,7 @@
 package pokecache
 
 import (
-	"fmt"
+	//	"fmt"
 	"sync"
 	"time"
 )
@@ -68,9 +68,9 @@ func (c *Cache) pruneEntries(interval time.Duration) {
 	defer c.mu.Unlock()
 
 	for k, v := range c.entries {
-		fmt.Printf("%s : %v\n", k, v)
-		fmt.Printf("t.C: %s - created: %s\n", now, v.createdAt)
-		fmt.Printf("t.C - created: %v\n", now.Sub(v.createdAt))
+		//		fmt.Printf("%s : %v\n", k, v)
+		//		fmt.Printf("t.C: %s - created: %s\n", now, v.createdAt)
+		//		fmt.Printf("t.C - created: %v\n", now.Sub(v.createdAt))
 		if now.Sub(v.createdAt) > interval {
 			delete(c.entries, k)
 		}
