@@ -55,8 +55,12 @@ func runRepl(config *Config) {
 			fmt.Println("Not a valid cmd")
 			continue
 		}
+		var args []string
+		if len(words) > 1 {
+			args = words[1:]
+		}
 
-		if err := cliCmd.callback(config); err != nil {
+		if err := cliCmd.callback(config, args...); err != nil {
 			fmt.Println(err)
 			continue
 		}
