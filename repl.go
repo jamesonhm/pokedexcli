@@ -13,12 +13,19 @@ type Config struct {
 	next     string
 	previous string
 	client   *pokeapi.Client
+	pokedex  map[string]pokeapi.Pokemon
 }
 
 func NewConfig(client *pokeapi.Client) *Config {
 	return &Config{
-		client: client,
+		client:  client,
+		pokedex: map[string]pokeapi.Pokemon{},
 	}
+}
+
+func (c *Config) AddPokemon(p pokeapi.Pokemon) {
+	name := p.Name
+	c.pokedex[name] = p
 }
 
 func (c *Config) Previous() string {

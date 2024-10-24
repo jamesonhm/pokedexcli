@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 )
 
@@ -39,6 +40,11 @@ func getCmds() map[string]cliCommand {
 			name:     "explore",
 			desc:     "display the names of the pokemon that can be found in the named area",
 			callback: cmdExplore,
+		},
+		"catch": {
+			name:     "catch",
+			desc:     "chance to catch a pokemon and add to pokedex",
+			callback: cmdCatch,
 		},
 	}
 }
@@ -104,5 +110,28 @@ func cmdExplore(c *Config, args ...string) error {
 	for _, encounter := range locDetails.PokemonEncounters {
 		fmt.Printf("- %s\n", encounter.Pokemon.Name)
 	}
+	return nil
+}
+
+func cmdCatch(c *Config, args ...string) error {
+	const catchLevel int = 40
+	if len(args) != 1 {
+		return fmt.Errorf("Provide the name of one pokemon")
+	}
+	name := args[0]
+	p, err := c.client.Pokemon(name)
+	if err != nil {
+		return err
+	}
+
+	chance := rand.Intn(p.BaseExperience)
+	fmt.Printf("exp: %d | chance: %d\n", p.BaseExperience, chance)
+	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+	if chance <= catchLevel {
+		fmt.Printf("%s was caught!\n", name)
+		c.AddPokemon(p)
+		return nil
+	}
+	fmt.Printf("%s escaped!\n", name)
 	return nil
 }
