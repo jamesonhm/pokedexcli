@@ -33,7 +33,6 @@ func (c *Client) ListLocations(pageURL string) (LocationArea, error) {
 	if pageURL != "" {
 		url = pageURL
 	}
-	fmt.Println("-URL: ", url)
 
 	if data, ok := c.cache.Get(url); ok {
 		locAreas := LocationArea{}
@@ -42,7 +41,6 @@ func (c *Client) ListLocations(pageURL string) (LocationArea, error) {
 			return LocationArea{}, err
 		}
 
-		fmt.Println("-from cache request")
 		return locAreas, nil
 	}
 
@@ -69,13 +67,11 @@ func (c *Client) ListLocations(pageURL string) (LocationArea, error) {
 	}
 
 	c.cache.Add(url, body)
-	fmt.Println("-from get request")
 	return locAreas, nil
 }
 
 func (c *Client) LocationDetails(name string) (LocationDetail, error) {
 	url := c.baseUrl + "location-area/" + name
-	fmt.Println("-URL: ", url)
 
 	if data, ok := c.cache.Get(url); ok {
 		locDetail := LocationDetail{}
@@ -84,7 +80,6 @@ func (c *Client) LocationDetails(name string) (LocationDetail, error) {
 			return LocationDetail{}, err
 		}
 
-		fmt.Println("-from cache request")
 		return locDetail, nil
 	}
 
@@ -111,7 +106,6 @@ func (c *Client) LocationDetails(name string) (LocationDetail, error) {
 	}
 
 	c.cache.Add(url, body)
-	fmt.Println("-from get request")
 	return locDetail, nil
 
 }

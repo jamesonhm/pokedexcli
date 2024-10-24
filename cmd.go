@@ -91,11 +91,16 @@ func cmdMapb(c *Config, args ...string) error {
 }
 
 func cmdExplore(c *Config, args ...string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("Provide one location name")
+	}
 	locDetails, err := c.client.LocationDetails(args[0])
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("Exploring", args[0], "...")
+	fmt.Println("Found Pokemon:")
 	for _, encounter := range locDetails.PokemonEncounters {
 		fmt.Printf("- %s\n", encounter.Pokemon.Name)
 	}
