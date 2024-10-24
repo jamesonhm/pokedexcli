@@ -51,6 +51,11 @@ func getCmds() map[string]cliCommand {
 			desc:     "view stats of a pokemon you have caught",
 			callback: cmdInspect,
 		},
+		"pokedex": {
+			name:     "pokedex",
+			desc:     "view list of caught pokemon",
+			callback: cmdPokedex,
+		},
 	}
 }
 
@@ -160,6 +165,17 @@ func cmdInspect(c *Config, args ...string) error {
 	fmt.Println("Types:")
 	for _, t := range p.Types {
 		fmt.Printf("  - %s\n", t.Type.Name)
+	}
+	return nil
+}
+
+func cmdPokedex(c *Config, args ...string) error {
+	if len(c.pokedex) == 0 {
+		return fmt.Errorf("you do not have any pokemon, you are a loser")
+	}
+	fmt.Println("Your Pokedex:")
+	for name := range c.pokedex {
+		fmt.Printf("  - %s\n", name)
 	}
 	return nil
 }
