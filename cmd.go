@@ -37,14 +37,19 @@ func getCmds() map[string]cliCommand {
 			callback: cmdMapb,
 		},
 		"explore": {
-			name:     "explore",
+			name:     "explore <location_name>",
 			desc:     "display the names of the pokemon that can be found in the named area",
 			callback: cmdExplore,
 		},
 		"catch": {
-			name:     "catch",
+			name:     "catch <pokemon_name>",
 			desc:     "chance to catch a pokemon and add to pokedex",
 			callback: cmdCatch,
+		},
+		"inspect": {
+			name:     "inspect <pokemon_name>",
+			desc:     "view stats of a pokemon you have caught",
+			callback: cmdInspect,
 		},
 	}
 }
@@ -133,5 +138,28 @@ func cmdCatch(c *Config, args ...string) error {
 		return nil
 	}
 	fmt.Printf("%s escaped!\n", name)
+	return nil
+}
+
+func cmdInspect(c *Config, args ...string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("provide the name of a pokemon to inspect")
+	}
+	name := args[0]
+	p, ok := c.pokedex[name]
+	if !ok {
+		return fmt.Errorf("you have not caught that pokemon")
+	}
+	fmt.Println("Name:", name)
+	fmt.Println("Height:", p.Height)
+	fmt.Println("Weight:", p.Weight)
+	fmt.Println("Stats:")
+	for _, s := range p.Stats {
+		fmt.Printf("  -%s: %v\n", s.Stat.Name, s.BaseStat)
+	}
+	fmt.Println("Types:")
+	for _, t := range p.Types {
+		fmt.Printf("  - %s\n", t.Type.Name)
+	}
 	return nil
 }
