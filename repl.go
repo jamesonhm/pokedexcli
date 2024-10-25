@@ -67,7 +67,8 @@ func runRepl(config *Config) {
 		// Handle special keys
 		switch {
 		case input == "\x03":
-			fmt.Println("\nExiting...")
+			fmt.Print("\r\x1b[K")
+			fmt.Println("Exiting...\r")
 			return
 		case input == "\x1b[A":
 			// check history, if not empty clear and reprint
@@ -84,7 +85,7 @@ func runRepl(config *Config) {
 		// Normal input processing
 		if input != "" {
 			// add to history
-			fmt.Println("Entered:", input)
+			fmt.Printf("\n%s\n", "Entered:"+input)
 			// process command
 		}
 		//scanner.Scan()
@@ -128,7 +129,10 @@ func readLine() (string, error) {
 			continue
 		}
 
-		if tmp[0] == '\x1b' {
+		switch tmp[0] {
+		// Handle escape sequences
+		//if tmp[0] == '\x1b' {
+		case '\x1b':
 			// Read [ char
 			os.Stdin.Read(tmp)
 			if tmp[0] != '[' {
@@ -137,22 +141,41 @@ func readLine() (string, error) {
 			// Read actual code (A for up, B for down, etc,)
 			os.Stdin.Read(tmp)
 			return "\x1b[" + string(tmp[0]), nil
-		}
-		if tmp[0] == '\x03' {
+		//}
+		// Ctrl-C
+		//if tmp[0] == '\x03' {
+		case '\x03':
 			return "\x03", nil
-		}
+		//}
+		//if tmp[0] == '\x7f' {
+		case '\x7f':
+			if len(buf) > 0 {
+				buf = buf[:len(buf)-1]
+				fmt.Print("\b \b")
+			}
+			continue
+		//}
 
 		// Normal characters
-		if tmp[0] == '\r' || tmp[0] == '\n' {
+		//if tmp[0] == '\r' || tmp[0] == '\n' {
+		case '\r', '\n':
 			fmt.Print("\r")
 			return string(buf), nil
+			//}
 		}
+		fmt.Print(string(tmp[0]))
 		buf = append(buf, tmp[0])
+		//redraw(buf)
 	}
 }
 
+func redraw(input []byte) {
+	fmt.Print("\r\x1b[K")
+	fmt.Printf("Pokedex> %s", input)
+}
+
 func clearLine() {
-	fmt.Print("\n\x1b[K")
+	fmt.Print("\r\x1b[K")
 }
 
 func cleanInput(text string) []string {
