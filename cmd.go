@@ -60,10 +60,12 @@ func getCmds() map[string]cliCommand {
 }
 
 func cmdHelp(c *Config, args ...string) error {
-	fmt.Printf("\nWelcome to the Pokedex!\n\n")
-	fmt.Printf("Usage:\n\n")
+	c.RawPrint("\nWelcome to the Pokedex!\n\n")
+	c.RawPrint("Usage:\n\n")
 	for _, cmd := range getCmds() {
-		fmt.Printf("%s: %s\n", cmd.name, cmd.desc)
+		//fmt.Print("\r\x1b[K")
+		//fmt.Printf("%s: %s\n", cmd.name, cmd.desc)
+		c.RawPrint("%s: %s\n", cmd.name, cmd.desc)
 	}
 	fmt.Println()
 	return nil
@@ -83,7 +85,9 @@ func cmdMap(c *Config, args ...string) error {
 	c.UpdatePrev(locAreas.Previous)
 	c.UpdateNext(locAreas.Next)
 	for _, result := range locAreas.Results {
-		fmt.Printf("%v\n", result.Name)
+		//fmt.Print("\r\x1b[K")
+		//fmt.Printf("%v\n", result.Name)
+		c.RawPrint("%v\n", result.Name)
 	}
 	return nil
 }
@@ -101,7 +105,9 @@ func cmdMapb(c *Config, args ...string) error {
 	c.UpdatePrev(locAreas.Previous)
 	c.UpdateNext(locAreas.Next)
 	for _, result := range locAreas.Results {
-		fmt.Printf("%v\n", result.Name)
+		//fmt.Print("\r\x1b[K")
+		//fmt.Printf("%v\n", result.Name)
+		c.RawPrint("%v\n", result.Name)
 	}
 	return nil
 }
@@ -115,10 +121,12 @@ func cmdExplore(c *Config, args ...string) error {
 		return err
 	}
 
-	fmt.Println("Exploring", args[0], "...")
-	fmt.Println("Found Pokemon:")
+	c.RawPrint("Exploring %s%s\n", args[0], "...")
+	c.RawPrint("Found Pokemon:\n")
 	for _, encounter := range locDetails.PokemonEncounters {
-		fmt.Printf("- %s\n", encounter.Pokemon.Name)
+		//fmt.Print("\r\x1b[K")
+		//fmt.Printf("- %s\n", encounter.Pokemon.Name)
+		c.RawPrint("- %s\n", encounter.Pokemon.Name)
 	}
 	return nil
 }
@@ -136,13 +144,13 @@ func cmdCatch(c *Config, args ...string) error {
 
 	chance := rand.Intn(p.BaseExperience)
 	fmt.Printf("exp: %d | chance: %d\n", p.BaseExperience, chance)
-	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+	c.RawPrint("Throwing a Pokeball at %s...\n", name)
 	if chance <= catchLevel {
-		fmt.Printf("%s was caught!\n", name)
+		c.RawPrint("%s was caught!\n", name)
 		c.AddPokemon(p)
 		return nil
 	}
-	fmt.Printf("%s escaped!\n", name)
+	c.RawPrint("%s escaped!\n", name)
 	return nil
 }
 
@@ -155,16 +163,16 @@ func cmdInspect(c *Config, args ...string) error {
 	if !ok {
 		return fmt.Errorf("you have not caught that pokemon")
 	}
-	fmt.Println("Name:", name)
-	fmt.Println("Height:", p.Height)
-	fmt.Println("Weight:", p.Weight)
-	fmt.Println("Stats:")
+	c.RawPrint("Name: %s\n", name)
+	c.RawPrint("Height: %d\n", p.Height)
+	c.RawPrint("Weight: %d\n", p.Weight)
+	c.RawPrint("Stats:\n")
 	for _, s := range p.Stats {
-		fmt.Printf("  -%s: %v\n", s.Stat.Name, s.BaseStat)
+		c.RawPrint("  -%s: %v\n", s.Stat.Name, s.BaseStat)
 	}
-	fmt.Println("Types:")
+	c.RawPrint("Types:\n")
 	for _, t := range p.Types {
-		fmt.Printf("  - %s\n", t.Type.Name)
+		c.RawPrint("  - %s\n", t.Type.Name)
 	}
 	return nil
 }
@@ -173,9 +181,9 @@ func cmdPokedex(c *Config, args ...string) error {
 	if len(c.pokedex) == 0 {
 		return fmt.Errorf("you do not have any pokemon, you are a loser")
 	}
-	fmt.Println("Your Pokedex:")
+	c.RawPrint("Your Pokedex:\n")
 	for name := range c.pokedex {
-		fmt.Printf("  - %s\n", name)
+		c.RawPrint("  - %s\n", name)
 	}
 	return nil
 }
