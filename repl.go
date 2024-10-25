@@ -1,12 +1,15 @@
 package main
 
 import (
-	"bufio"
+	//	"bufio"
 	"fmt"
 	"os"
 	"strings"
 
+	//"atomicgo.dev/keyboard"
+	//"atomicgo.dev/keyboard/keys"
 	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
+	"golang.org/x/term"
 )
 
 type Config struct {
@@ -45,34 +48,111 @@ func (c *Config) UpdateNext(new string) {
 }
 
 func runRepl(config *Config) {
-	scanner := bufio.NewScanner(os.Stdin)
+	//scanner := bufio.NewScanner(os.Stdin)
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
 	for {
+		fmt.Print("\r\x1b[K")
 		fmt.Printf("Pokedex> ")
-		scanner.Scan()
-
-		words := cleanInput(scanner.Text())
-		if len(words) == 0 {
+		input, err := readLine()
+		if err != nil {
+			fmt.Println("\nError reading input:", err)
 			continue
 		}
 
-		cmdName := words[0]
-		cliCmd, ok := getCmds()[cmdName]
-		if !ok {
-			fmt.Println("Not a valid cmd")
+		// Handle special keys
+		switch {
+		case input == "\x03":
+			fmt.Println("\nExiting...")
+			return
+		case input == "\x1b[A":
+			// check history, if not empty clear and reprint
+			fmt.Println("UP PRESSED")
+			clearLine()
+			fmt.Print("Pokedex> " + "history here")
+			continue
+		case input == "\x1b[B":
+			// check history, if not empty, clear and reprint
+			fmt.Println("DOWN PRESSED")
 			continue
 		}
-		var args []string
-		if len(words) > 1 {
-			args = words[1:]
-		}
 
-		if err := cliCmd.callback(config, args...); err != nil {
-			fmt.Println(err)
-			continue
+		// Normal input processing
+		if input != "" {
+			// add to history
+			fmt.Println("Entered:", input)
+			// process command
 		}
-
+		//scanner.Scan()
 	}
+}
+
+//words := cleanInput(scanner.Text())
+//if len(words) == 0 {
+//	continue
+//}
+
+//cmdName := words[0]
+//cliCmd, ok := getCmds()[cmdName]
+//if !ok {
+//	fmt.Println("Not a valid cmd")
+//	continue
+//}
+//var args []string
+//if len(words) > 1 {
+//	args = words[1:]
+//}
+
+//if err := cliCmd.callback(config, args...); err != nil {
+//	fmt.Println(err)
+//	continue
+//}
+
+//	}
+//}
+
+func readLine() (string, error) {
+	var buf []byte
+	tmp := make([]byte, 1)
+
+	for {
+		n, err := os.Stdin.Read(tmp)
+		if err != nil {
+			return "", err
+		}
+		if n == 0 {
+			continue
+		}
+
+		if tmp[0] == '\x1b' {
+			// Read [ char
+			os.Stdin.Read(tmp)
+			if tmp[0] != '[' {
+				continue
+			}
+			// Read actual code (A for up, B for down, etc,)
+			os.Stdin.Read(tmp)
+			return "\x1b[" + string(tmp[0]), nil
+		}
+		if tmp[0] == '\x03' {
+			return "\x03", nil
+		}
+
+		// Normal characters
+		if tmp[0] == '\r' || tmp[0] == '\n' {
+			fmt.Print("\r")
+			return string(buf), nil
+		}
+		buf = append(buf, tmp[0])
+	}
+}
+
+func clearLine() {
+	fmt.Print("\n\x1b[K")
 }
 
 func cleanInput(text string) []string {
