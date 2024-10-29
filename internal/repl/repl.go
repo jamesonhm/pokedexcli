@@ -3,6 +3,7 @@ package repl
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/term"
@@ -15,6 +16,9 @@ type Repl struct {
 	reader    *_StdinReader
 	buffer    []byte
 	bufferPos int
+	promptRow int
+	height    int
+	width     int
 	debug     *os.File
 	onEnd     func()
 }
@@ -27,6 +31,9 @@ func NewRepl(handler Handler, debug string) *Repl {
 		reader:    newStdinReader(),
 		buffer:    nil,
 		bufferPos: 0,
+		promptRow: -1,
+		height:    0,
+		width:     0,
 		onEnd:     nil,
 		debug:     nil,
 	}
@@ -78,12 +85,32 @@ func (r *Repl) MakeRaw() error {
 	return nil
 }
 
+func (r *Repl) UnmakeRaw() {
+	r.onEnd()
+	r.onEnd = nil
+}
+
 // Internal Methods
+func (r *Repl) clearAfterPrompt() {
+	moveCursorTo(0, r.height-1)
+	if r.promptRow < 0 {
+		r.updatePromptRow(0)
+	}
+	dy := (r.height - 1 - r.promptRow)
+	clearRows(dy)
+}
+
 func (r *Repl) clearBuffer() {
-	moveCursorTo(0, 0)
+	moveCursorTo(0, r.height-1)
 
 	r.log("clearing buffer\n")
-	clearRows()
+	if r.promptRow < 0 {
+		r.updatePromptRow(0)
+	}
+	dy := (r.height - 1 - r.promptRow)
+
+	clearRows(dy)
+	clearRow()
 	r.resetBuffer()
 }
 
@@ -97,21 +124,27 @@ func (r *Repl) dispatch(b []byte) {
 		case 0:
 			return
 		case 3: // Ctrl-C
+			fmt.Fprintf(os.Stdout, "Ctrl C: %v\n", b)
 			r.clearBuffer()
 			//r.writeStatus()
 		case 4: // Ctrl-D
+			fmt.Fprintf(os.Stdout, "Ctrl D: %v\n", b)
 			r.quit()
 		case 13: // RETURN
+			fmt.Fprintf(os.Stdout, "Return: %v\n", b)
 			r.evalBuffer()
 		case 27: // ESC
+			fmt.Fprintf(os.Stdout, "ESC: %v\n", b)
 			r.clearBuffer()
 			//r.writeStatus()
 		case 127: // Backspace
-			r.backspaceActiveBuffer()
+			//r.backspaceActiveBuffer()
+			fmt.Fprintf(os.Stdout, "backspace: %v\n", b)
 		default:
 			if b[0] >= 32 {
 				//r.clearStatus()
-				r.addBytesToBuffer([]byte{b[0]})
+				fmt.Fprintf(os.Stdout, "default, b[0] >= 32: %v\n", b)
+				//r.addBytesToBuffer([]byte{b[0]})
 				//r.writeStatus()
 			}
 		}
@@ -119,15 +152,36 @@ func (r *Repl) dispatch(b []byte) {
 		if n == 3 {
 			switch b[2] {
 			case 65: // Up Arrow?
-				r.historyBack()
+				fmt.Fprintf(os.Stdout, "UPARROW: %v\n", b)
+				//r.historyBack()
 			case 66: // Down Arrow?
-				r.historyForward()
+				fmt.Fprintf(os.Stdout, "DOWNARROW: %v\n", b)
+				//r.historyForward()
 			}
 		}
 	} else {
-		r.cleanAndAddToBuffer(b)
+		fmt.Fprintf(os.Stdout, "Final else condition: %v\n", b)
+		//r.cleanAndAddToBuffer(b)
 	}
 	return
+}
+
+func (r *Repl) evalBuffer() {
+	//r.clearStatus()
+	r.newLine()
+	out := r.handler.Eval(strings.TrimSpace(string(r.buffer)))
+
+	if len(out) > 0 {
+		outLines := strings.Split(out, "\n")
+		for _, outline := range outLines {
+			fmt.Print(outline)
+			r.newLine()
+		}
+	}
+
+	//r.appendToHistory(r.buffer)
+	r.idx = -1
+	r.resetBuffer()
 }
 
 func (r *Repl) log(format string, args ...interface{}) {
@@ -136,9 +190,21 @@ func (r *Repl) log(format string, args ...interface{}) {
 	}
 }
 
+func (r *Repl) newLine() {
+	fmt.Fprintf(os.Stdout, "\n\r")
+}
+
 func (r *Repl) printPrompt() {
 	moveToRowStart()
 	fmt.Print(r.handler.Prompt())
+}
+
+func (r *Repl) quit() {
+	r.clearAfterPrompt()
+	fmt.Print("\n\r")
+	moveToRowStart()
+	r.UnmakeRaw()
+	os.Exit(0)
 }
 
 func (r *Repl) resetBuffer() {
@@ -146,4 +212,14 @@ func (r *Repl) resetBuffer() {
 	r.buffer = make([]byte, 0)
 	r.printPrompt()
 
+}
+
+func (r *Repl) updatePromptRow(row int) {
+	if row >= r.height {
+		row = r.height - 1
+	} else if row < 0 {
+		row = 0
+	}
+	r.promptRow = row
+	r.log("prompt row %d/%d\n", r.promptRow, r.height-1)
 }
