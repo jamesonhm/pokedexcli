@@ -3,10 +3,9 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"os"
 )
 
-type callbackFn func(c *Config, args ...string) error
+type callbackFn func(h *pokeHandler, args ...string) string
 
 type cliCommand struct {
 	name     string
@@ -59,131 +58,133 @@ func getCmds() map[string]cliCommand {
 	}
 }
 
-func cmdHelp(c *Config, args ...string) error {
-	c.RawPrint("\nWelcome to the Pokedex!\n\n")
-	c.RawPrint("Usage:\n\n")
+func cmdHelp(h *pokeHandler, args ...string) string {
+
+	msg := `Welcome to the Pokedex!
+Usage:`
 	for _, cmd := range getCmds() {
 		//fmt.Print("\r\x1b[K")
 		//fmt.Printf("%s: %s\n", cmd.name, cmd.desc)
-		c.RawPrint("%s: %s\n", cmd.name, cmd.desc)
+		msg += fmt.Sprintf(`\n%s: %s\n`, cmd.name, cmd.desc)
 	}
-	fmt.Println()
-	return nil
+	return msg
 }
 
-func cmdExit(c *Config, args ...string) error {
-	os.Exit(0)
-	return nil
+func cmdExit(h *pokeHandler, args ...string) string {
+	h.r.Quit()
+	return ""
 }
 
-func cmdMap(c *Config, args ...string) error {
-	locAreas, err := c.client.ListLocations(c.Next())
+func cmdMap(h *pokeHandler, args ...string) string {
+	locAreas, err := h.c.client.ListLocations(h.c.Next())
 	if err != nil {
-		return err
+		return err.Error()
 	}
 
-	c.UpdatePrev(locAreas.Previous)
-	c.UpdateNext(locAreas.Next)
+	h.c.UpdatePrev(locAreas.Previous)
+	h.c.UpdateNext(locAreas.Next)
+	var msg string
 	for _, result := range locAreas.Results {
 		//fmt.Print("\r\x1b[K")
 		//fmt.Printf("%v\n", result.Name)
-		c.RawPrint("%v\n", result.Name)
+		msg += fmt.Sprintf(`\n%v\n`, result.Name)
 	}
-	return nil
+	return msg
 }
 
-func cmdMapb(c *Config, args ...string) error {
-	if c.Previous() == "" {
-		return fmt.Errorf("On the first page")
+func cmdMapb(h *pokeHandler, args ...string) string {
+	if h.c.Previous() == "" {
+		return "On the first page"
 	}
 
-	locAreas, err := c.client.ListLocations(c.Previous())
+	locAreas, err := h.c.client.ListLocations(h.c.Previous())
 	if err != nil {
-		return err
+		return err.Error()
 	}
 
-	c.UpdatePrev(locAreas.Previous)
-	c.UpdateNext(locAreas.Next)
+	h.c.UpdatePrev(locAreas.Previous)
+	h.c.UpdateNext(locAreas.Next)
+	var msg string
 	for _, result := range locAreas.Results {
 		//fmt.Print("\r\x1b[K")
 		//fmt.Printf("%v\n", result.Name)
-		c.RawPrint("%v\n", result.Name)
+		msg += fmt.Sprintf(`\n%v\n`, result.Name)
 	}
-	return nil
+	return msg
 }
 
-func cmdExplore(c *Config, args ...string) error {
+func cmdExplore(h *pokeHandler, args ...string) string {
 	if len(args) != 1 {
-		return fmt.Errorf("Provide one location name")
+		return "Provide one location name"
 	}
-	locDetails, err := c.client.LocationDetails(args[0])
+	locDetails, err := h.c.client.LocationDetails(args[0])
 	if err != nil {
-		return err
+		return err.Error()
 	}
 
-	c.RawPrint("Exploring %s%s\n", args[0], "...")
-	c.RawPrint("Found Pokemon:\n")
+	msg := fmt.Sprintf(`Exploring %s%s\n)
+Found Pokemon:\n`, args[0], "...")
 	for _, encounter := range locDetails.PokemonEncounters {
 		//fmt.Print("\r\x1b[K")
 		//fmt.Printf("- %s\n", encounter.Pokemon.Name)
-		c.RawPrint("- %s\n", encounter.Pokemon.Name)
+		msg += fmt.Sprintf(`\n - %s\n`, encounter.Pokemon.Name)
 	}
-	return nil
+	return msg
 }
 
-func cmdCatch(c *Config, args ...string) error {
+func cmdCatch(h *pokeHandler, args ...string) string {
 	const catchLevel int = 40
 	if len(args) != 1 {
-		return fmt.Errorf("Provide the name of one pokemon")
+		return "Provide the name of one pokemon"
 	}
 	name := args[0]
-	p, err := c.client.Pokemon(name)
+	p, err := h.c.client.Pokemon(name)
 	if err != nil {
-		return err
+		return err.Error()
 	}
 
 	chance := rand.Intn(p.BaseExperience)
-	fmt.Printf("exp: %d | chance: %d\n", p.BaseExperience, chance)
-	c.RawPrint("Throwing a Pokeball at %s...\n", name)
+	msg := fmt.Sprintf(`exp: %d | chance: %d
+Throwing a Pokeball at %s...\n`, p.BaseExperience, chance, name)
 	if chance <= catchLevel {
-		c.RawPrint("%s was caught!\n", name)
-		c.AddPokemon(p)
-		return nil
+		msg += fmt.Sprintf(`%s was caught!\n`, name)
+		h.c.AddPokemon(p)
+		return msg
 	}
-	c.RawPrint("%s escaped!\n", name)
-	return nil
+	msg += fmt.Sprintf(`%s escaped!\n`, name)
+	return msg
 }
 
-func cmdInspect(c *Config, args ...string) error {
+func cmdInspect(h *pokeHandler, args ...string) string {
 	if len(args) != 1 {
-		return fmt.Errorf("provide the name of a pokemon to inspect")
+		return "provide the name of a pokemon to inspect"
 	}
 	name := args[0]
-	p, ok := c.pokedex[name]
+	p, ok := h.c.pokedex[name]
 	if !ok {
-		return fmt.Errorf("you have not caught that pokemon")
+		return "you have not caught that pokemon"
 	}
-	c.RawPrint("Name: %s\n", name)
-	c.RawPrint("Height: %d\n", p.Height)
-	c.RawPrint("Weight: %d\n", p.Weight)
-	c.RawPrint("Stats:\n")
+	msg := fmt.Sprintf(`Name: %s
+Height: %d
+Weight: %d
+Stats:`, name, p.Height, p.Weight)
 	for _, s := range p.Stats {
-		c.RawPrint("  -%s: %v\n", s.Stat.Name, s.BaseStat)
+		msg += fmt.Sprintf(`  -%s: %v\n`, s.Stat.Name, s.BaseStat)
 	}
-	c.RawPrint("Types:\n")
+	msg += `Types:\n`
 	for _, t := range p.Types {
-		c.RawPrint("  - %s\n", t.Type.Name)
+		msg += fmt.Sprintf(`  - %s\n`, t.Type.Name)
 	}
-	return nil
+	return msg
 }
 
-func cmdPokedex(c *Config, args ...string) error {
-	if len(c.pokedex) == 0 {
-		return fmt.Errorf("you do not have any pokemon, you are a loser")
+func cmdPokedex(h *pokeHandler, args ...string) string {
+	if len(h.c.pokedex) == 0 {
+		return "you do not have any pokemon, you are a loser"
 	}
-	c.RawPrint("Your Pokedex:\n")
-	for name := range c.pokedex {
-		c.RawPrint("  - %s\n", name)
+	msg := fmt.Sprintf(`Your Pokedex:\n`)
+	for name := range h.c.pokedex {
+		msg += fmt.Sprintf(`  - %s\n`, name)
 	}
-	return nil
+	return msg
 }

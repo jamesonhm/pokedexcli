@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"golang.org/x/term"
 )
@@ -16,6 +15,8 @@ type Repl struct {
 	reader    *_StdinReader
 	buffer    []byte
 	bufferPos int
+	viewStart int
+	viewEnd   int
 	promptRow int
 	height    int
 	width     int
@@ -31,6 +32,8 @@ func NewRepl(handler Handler, debug string) *Repl {
 		reader:    newStdinReader(),
 		buffer:    nil,
 		bufferPos: 0,
+		viewStart: 0,
+		viewEnd:   -1,
 		promptRow: -1,
 		height:    0,
 		width:     0,
@@ -90,7 +93,55 @@ func (r *Repl) UnmakeRaw() {
 	r.onEnd = nil
 }
 
+func (r *Repl) Quit() {
+	r.quit()
+}
+
 // Internal Methods
+func (r *Repl) addBytesToBuffer(bs []byte) {
+	if r.bufferPos == len(r.buffer) {
+		xBef, _ := r.cursorCoord(-1)
+		r.bufferPos += len(bs)
+		len_ := len(r.buffer)
+		r.buffer = append(r.buffer, bs...)
+
+		if !r.overflow() {
+			needSync := false
+			for _, b := range bs {
+				r.writeByte(b)
+				if b != '\n' && xBef == r.width-1 {
+					needSync = true
+				}
+			}
+
+			if needSync {
+				r.syncCursor()
+			}
+			r.boundPromptRow()
+			return
+		} else {
+			// reset prev changes
+			r.bufferPos -= len(bs)
+			r.buffer = r.buffer[0:len_]
+		}
+	}
+
+	tail := r.buffer[r.bufferPos:]
+
+	newBuffer := make([]byte, 0)
+	newBuffer = append(newBuffer, r.buffer[0:r.bufferPos]...)
+	newBuffer = append(newBuffer, bs...)
+	newBuffer = append(newBuffer, tail...)
+
+	newPos := r.bufferPos + len(bs)
+	r.force(newBufer, newPos) // force should take into account extra long lines
+}
+
+func (r *Repl) calcHeight(buffer []byte, x0 int, w int) int {
+	_, y := relCursorCoord(buffer, x0, len(buffer), w)
+	return y + 1
+}
+
 func (r *Repl) clearAfterPrompt() {
 	moveCursorTo(0, r.height-1)
 	if r.promptRow < 0 {
@@ -112,6 +163,18 @@ func (r *Repl) clearBuffer() {
 	clearRows(dy)
 	clearRow()
 	r.resetBuffer()
+}
+
+func (r *Repl) cursorCoord(bufferPos int) (int, int) {
+	w := r.width
+
+	if bufferPos < 0 {
+		bufferPos = r.bufferPos
+	}
+
+	x, y := relCursorCoord(r.buffer[r.viewStart:], r.promptLen(), bufferPos-r.viewStart, w)
+	y += r.promptRow
+	return x, y
 }
 
 func (r *Repl) dispatch(b []byte) {
@@ -143,8 +206,8 @@ func (r *Repl) dispatch(b []byte) {
 		default:
 			if b[0] >= 32 {
 				//r.clearStatus()
-				fmt.Fprintf(os.Stdout, "default, b[0] >= 32: %v\n", b)
-				//r.addBytesToBuffer([]byte{b[0]})
+				//fmt.Fprintf(os.Stdout, "default, b[0] >= 32: %v\n", b)
+				r.addBytesToBuffer([]byte{b[0]})
 				//r.writeStatus()
 			}
 		}
@@ -194,9 +257,22 @@ func (r *Repl) newLine() {
 	fmt.Fprintf(os.Stdout, "\n\r")
 }
 
+func (r *Repl) overflow() bool {
+	b := r.calcHeight() > r.height
+	if !b {
+		r.viewStart = 0
+		r.viewEnd = -1
+	}
+	return b
+}
+
 func (r *Repl) printPrompt() {
 	moveToRowStart()
 	fmt.Print(r.handler.Prompt())
+}
+
+func (r *Repl) promptLen() int {
+	return len(r.handler.Prompt())
 }
 
 func (r *Repl) quit() {
@@ -205,6 +281,26 @@ func (r *Repl) quit() {
 	moveToRowStart()
 	r.UnmakeRaw()
 	os.Exit(0)
+}
+
+func relCursorCoord(buffer []byte, x0 int, bufferPos int, w int) (int, int) {
+	x := x0
+	y := 0
+	for j, c := range buffer {
+		if j >= bufferPos {
+			break
+		} else if c == '\n' {
+			x = 0
+			y += 1
+		} else {
+			x += 1
+		}
+		if x == w {
+			x = 0
+			y += 1
+		}
+	}
+	return x, y
 }
 
 func (r *Repl) resetBuffer() {
@@ -222,4 +318,12 @@ func (r *Repl) updatePromptRow(row int) {
 	}
 	r.promptRow = row
 	r.log("prompt row %d/%d\n", r.promptRow, r.height-1)
+}
+
+func (r *Repl) writeByte(b byte) {
+	if b == '\n' {
+		r.newLine()
+	} else {
+		fmt.Fprintf(os.Stdout, "%c", b)
+	}
 }

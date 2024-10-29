@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/jamesonhm/pokedexcli/internal/pokeapi"
 	"golang.org/x/term"
@@ -132,22 +131,22 @@ func runRepl(config *Config) {
 				config.RawPrint("Exiting...\n\r")
 				return
 			}
-			cliCmd, ok := getCmds()[cmdName]
-			if !ok {
-				//fmt.Println("Not a valid cmd")
-				fmt.Print("\n")
-				config.RawPrint("%s not a valid cmd\n", cmdName)
-				continue
-			}
-			var args []string
-			if len(words) > 1 {
-				args = words[1:]
-			}
-			fmt.Print("\n")
-			if err := cliCmd.callback(config, args...); err != nil {
-				fmt.Println(err)
-				continue
-			}
+			//			cliCmd, ok := getCmds()[cmdName]
+			//			if !ok {
+			//				//fmt.Println("Not a valid cmd")
+			//				fmt.Print("\n")
+			//				config.RawPrint("%s not a valid cmd\n", cmdName)
+			//				continue
+			//			}
+			//			var args []string
+			//			if len(words) > 1 {
+			//				args = words[1:]
+			//			}
+			//			fmt.Print("\n")
+			//			if err := cliCmd.callback(config, args...); err != nil {
+			//				fmt.Println(err)
+			//				continue
+			//			}
 			ch.sync()
 		}
 	}
@@ -220,8 +219,8 @@ func clearLine() {
 	fmt.Print("\r\x1b[K")
 }
 
-func cleanInput(text string) []string {
-	output := strings.ToLower(text)
-	words := strings.Fields(output)
-	return words
-}
+//func cleanInput(text string) []string {
+//	output := strings.ToLower(text)
+//	words := strings.Fields(output)
+//	return words
+//}
